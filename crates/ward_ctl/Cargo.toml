@@ -1,0 +1,21 @@
+[package]
+name = "ward_ctl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Ward control CLI for managing GPG key drives"
+
+[[bin]]
+name = "wardctl"
+path = "src/main.rs"
+
+[dependencies]
+ward_core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+dirs.workspace = true
+
+[lints]
+workspace = true

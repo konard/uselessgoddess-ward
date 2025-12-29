@@ -1,0 +1,48 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+authors = ["Ward Contributors"]
+repository = "https://github.com/uselessgoddess/ward"
+description = "Automated GPG key manager using USB drives as security tokens"
+
+[workspace.dependencies]
+# Error handling
+anyhow = "1"
+thiserror = "2"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# System info and directories
+sysinfo = "0.35"
+dirs = "6"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# OS-specific (optional)
+notify = "7"
+
+# Testing
+tempfile = "3"
+
+# Internal crates
+ward_core = { path = "crates/ward_core" }
+
+[workspace.lints.rust]
+# Allow unsafe code for platform-specific calls (e.g., getuid on Linux)
+# unsafe_code = "deny"
+
+[workspace.lints.clippy]
+all = "warn"
+pedantic = "warn"

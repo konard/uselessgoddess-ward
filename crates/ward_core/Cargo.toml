@@ -1,0 +1,33 @@
+[package]
+name = "ward_core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Core library for Ward GPG key manager"
+
+[dependencies]
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+toml.workspace = true
+sysinfo.workspace = true
+dirs.workspace = true
+tracing.workspace = true
+notify = { workspace = true, optional = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.59", features = [
+  "Win32_Foundation",
+  "Win32_Storage_FileSystem",
+  "Win32_System_IO",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[features]
+default = []
+filesystem-notify = ["notify"]
+
+[lints]
+workspace = true

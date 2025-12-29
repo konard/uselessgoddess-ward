@@ -1,0 +1,24 @@
+[package]
+name = "ward_daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Ward daemon service for GPG key management"
+
+[[bin]]
+name = "ward"
+path = "src/main.rs"
+
+[dependencies]
+ward_core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+ctrlc = "3"
+
+[target.'cfg(windows)'.dependencies]
+windows-service = "0.8"
+
+[lints]
+workspace = true
