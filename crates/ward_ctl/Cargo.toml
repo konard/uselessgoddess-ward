@@ -9,6 +9,10 @@ description = "Ward control CLI for managing GPG key drives"
 name = "wardctl"
 path = "src/main.rs"
 
+[features]
+default = []
+systemd = []
+
 [dependencies]
 ward_core.workspace = true
 anyhow.workspace = true

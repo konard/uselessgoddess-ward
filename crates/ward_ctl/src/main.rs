@@ -205,7 +205,7 @@ fn cmd_config() -> Result<()> {
 fn cmd_install() -> Result<()> {
   #[cfg(target_os = "linux")]
   {
-    install_systemd_service()?;
+    install_linux_service()?;
   }
 
   #[cfg(target_os = "windows")]
@@ -230,7 +230,7 @@ fn cmd_install() -> Result<()> {
 fn cmd_uninstall() -> Result<()> {
   #[cfg(target_os = "linux")]
   {
-    uninstall_systemd_service()?;
+    uninstall_linux_service()?;
   }
 
   #[cfg(target_os = "windows")]
@@ -248,8 +248,8 @@ fn cmd_uninstall() -> Result<()> {
   Ok(())
 }
 
-#[cfg(target_os = "linux")]
-fn install_systemd_service() -> Result<()> {
+#[cfg(all(target_os = "linux", feature = "systemd"))]
+fn install_linux_service() -> Result<()> {
   use std::env;
 
   let exe_path = env::current_exe()?;
@@ -258,7 +258,7 @@ fn install_systemd_service() -> Result<()> {
     .unwrap_or(std::path::Path::new("/usr/local/bin"))
     .join("ward");
 
-  println!("Linux service installation:");
+  println!("Systemd service installation:");
   println!();
   println!("Create ~/.config/systemd/user/ward.service with:");
   println!();
@@ -283,15 +283,62 @@ fn install_systemd_service() -> Result<()> {
   Ok(())
 }
 
-#[cfg(target_os = "linux")]
-fn uninstall_systemd_service() -> Result<()> {
-  println!("Linux service uninstallation:");
+#[cfg(all(target_os = "linux", feature = "systemd"))]
+fn uninstall_linux_service() -> Result<()> {
+  println!("Systemd service uninstallation:");
   println!();
   println!("Run:");
   println!("  systemctl --user stop ward");
   println!("  systemctl --user disable ward");
   println!("  rm ~/.config/systemd/user/ward.service");
   println!("  systemctl --user daemon-reload");
+
+  Ok(())
+}
+
+#[cfg(all(target_os = "linux", not(feature = "systemd")))]
+fn install_linux_service() -> Result<()> {
+  use std::env;
+
+  let exe_path = env::current_exe()?;
+  let ward_path = exe_path
+    .parent()
+    .unwrap_or(std::path::Path::new("/usr/local/bin"))
+    .join("ward");
+
+  println!("Linux service installation:");
+  println!();
+  println!("Ward daemon path: {}", ward_path.display());
+  println!();
+  println!("Configure your init system to run the ward daemon at startup.");
+  println!("The daemon should be run as your user (not root).");
+  println!();
+  println!("Example for various init systems:");
+  println!();
+  println!("  OpenRC:  Add to /etc/local.d/ward.start");
+  println!("  runit:   Create /etc/sv/ward/run");
+  println!("  dinit:   Create ~/.config/dinit.d/ward");
+  println!("  s6:      Create ~/service/ward/run");
+  println!();
+  println!("Or simply run 'ward' in your shell profile.");
+  println!();
+  println!("For systemd-specific instructions, rebuild with:");
+  println!("  cargo build --features systemd");
+
+  Ok(())
+}
+
+#[cfg(all(target_os = "linux", not(feature = "systemd")))]
+fn uninstall_linux_service() -> Result<()> {
+  println!("Linux service uninstallation:");
+  println!();
+  println!("Remove the ward service configuration from your init system.");
+  println!("The location depends on your init system:");
+  println!();
+  println!("  OpenRC:  Remove /etc/local.d/ward.start");
+  println!("  runit:   Remove /etc/sv/ward/");
+  println!("  dinit:   Remove ~/.config/dinit.d/ward");
+  println!("  s6:      Remove ~/service/ward/");
 
   Ok(())
 }
