@@ -1,11 +1,3 @@
-//! Ward control CLI - Manage Ward drives and daemon.
-//!
-//! This tool provides commands to:
-//! - Initialize USB drives for use with Ward
-//! - Manage the allow list of authorized drives
-//! - Check daemon status
-//! - Install/uninstall system service
-
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -15,56 +7,33 @@ use ward_core::{
   Config, DaemonStatus, DriveMonitor, WardDrive, config::DaemonState,
 };
 
-/// Ward control - Manage GPG key drives.
 #[derive(Parser, Debug)]
 #[command(name = "wardctl")]
 #[command(author, version, about, long_about = None)]
 struct Args {
-  /// Enable verbose output.
   #[arg(short, long)]
   verbose: bool,
-
   #[command(subcommand)]
   command: Command,
 }
 
 #[derive(Subcommand, Debug)]
 enum Command {
-  /// Initialize a USB drive for use with Ward.
   Init {
-    /// Path to the USB drive mount point.
     path: PathBuf,
-
-    /// Label for the drive.
     #[arg(short, long, default_value = "Ward Drive")]
     label: String,
   },
-
-  /// Allow a Ward drive (whitelist its UUID).
   Allow {
-    /// Path to the Ward drive (optional, uses detected drive if not provided).
     path: Option<PathBuf>,
   },
-
-  /// Disallow a Ward drive (remove from whitelist).
   Disallow {
-    /// UUID of the drive to disallow.
     uuid: String,
   },
-
-  /// Show current daemon status.
   Status,
-
-  /// List all detected Ward drives.
   List,
-
-  /// Install Ward as a system service.
   Install,
-
-  /// Uninstall Ward system service.
   Uninstall,
-
-  /// Show configuration.
   Config,
 }
 
@@ -94,7 +63,6 @@ fn main() -> Result<()> {
   }
 }
 
-/// Initialize a USB drive for Ward.
 fn cmd_init(path: &PathBuf, label: &str) -> Result<()> {
   println!("Initializing Ward drive at {:?}...", path);
 
@@ -113,15 +81,11 @@ fn cmd_init(path: &PathBuf, label: &str) -> Result<()> {
   Ok(())
 }
 
-/// Allow a Ward drive.
 fn cmd_allow(path: Option<&std::path::Path>) -> Result<()> {
   let drive = match path {
     Some(p) => WardDrive::detect(p).context("Failed to detect Ward drive")?,
-    None => {
-      // Try to find a Ward drive
-      DriveMonitor::find_ward_drive()?
-        .context("No Ward drive detected. Please specify a path.")?
-    }
+    None => DriveMonitor::find_ward_drive()?
+      .context("No Ward drive detected. Please specify a path.")?,
   };
 
   let mut config = Config::load()?;
@@ -140,7 +104,6 @@ fn cmd_allow(path: Option<&std::path::Path>) -> Result<()> {
   Ok(())
 }
 
-/// Disallow a Ward drive.
 fn cmd_disallow(uuid: &str) -> Result<()> {
   let mut config = Config::load()?;
 
@@ -157,7 +120,6 @@ fn cmd_disallow(uuid: &str) -> Result<()> {
   Ok(())
 }
 
-/// Show daemon status.
 fn cmd_status() -> Result<()> {
   let state = DaemonState::load()?;
   let status = DaemonStatus::from_state(&state);
@@ -184,7 +146,6 @@ fn cmd_status() -> Result<()> {
   Ok(())
 }
 
-/// List detected Ward drives.
 fn cmd_list() -> Result<()> {
   println!("Scanning for Ward drives...");
   println!();
@@ -219,7 +180,6 @@ fn cmd_list() -> Result<()> {
   Ok(())
 }
 
-/// Show configuration.
 fn cmd_config() -> Result<()> {
   let config = Config::load()?;
 
@@ -242,7 +202,6 @@ fn cmd_config() -> Result<()> {
   Ok(())
 }
 
-/// Install Ward as a system service.
 fn cmd_install() -> Result<()> {
   #[cfg(target_os = "linux")]
   {
@@ -268,7 +227,6 @@ fn cmd_install() -> Result<()> {
   Ok(())
 }
 
-/// Uninstall Ward system service.
 fn cmd_uninstall() -> Result<()> {
   #[cfg(target_os = "linux")]
   {
@@ -292,7 +250,7 @@ fn cmd_uninstall() -> Result<()> {
 
 #[cfg(target_os = "linux")]
 fn install_systemd_service() -> Result<()> {
-  use std::{env, fs};
+  use std::env;
 
   let exe_path = env::current_exe()?;
   let ward_path = exe_path
@@ -300,35 +258,24 @@ fn install_systemd_service() -> Result<()> {
     .unwrap_or(std::path::Path::new("/usr/local/bin"))
     .join("ward");
 
-  let service_content = format!(
-    r#"[Unit]
-Description=Ward GPG Key Manager
-After=network.target
-
-[Service]
-Type=simple
-ExecStart={}
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-"#,
-    ward_path.display()
-  );
-
-  let user_service_dir = dirs::config_dir()
-    .unwrap_or_else(|| PathBuf::from("."))
-    .join("systemd/user");
-
-  fs::create_dir_all(&user_service_dir)?;
-
-  let service_path = user_service_dir.join("ward.service");
-  fs::write(&service_path, service_content)?;
-
-  println!("Systemd user service installed at {:?}", service_path);
+  println!("Linux service installation:");
   println!();
-  println!("To enable and start the service:");
+  println!("Create ~/.config/systemd/user/ward.service with:");
+  println!();
+  println!("[Unit]");
+  println!("Description=Ward GPG Key Manager");
+  println!("After=network.target");
+  println!();
+  println!("[Service]");
+  println!("Type=simple");
+  println!("ExecStart={}", ward_path.display());
+  println!("Restart=on-failure");
+  println!("RestartSec=5");
+  println!();
+  println!("[Install]");
+  println!("WantedBy=multi-user.target");
+  println!();
+  println!("Then run:");
   println!("  systemctl --user daemon-reload");
   println!("  systemctl --user enable ward");
   println!("  systemctl --user start ward");
@@ -338,24 +285,13 @@ WantedBy=multi-user.target
 
 #[cfg(target_os = "linux")]
 fn uninstall_systemd_service() -> Result<()> {
-  use std::fs;
-
-  let user_service_dir = dirs::config_dir()
-    .unwrap_or_else(|| PathBuf::from("."))
-    .join("systemd/user");
-
-  let service_path = user_service_dir.join("ward.service");
-
-  if service_path.exists() {
-    fs::remove_file(&service_path)?;
-    println!("Systemd service removed.");
-    println!();
-    println!("To complete uninstallation:");
-    println!("  systemctl --user stop ward");
-    println!("  systemctl --user daemon-reload");
-  } else {
-    println!("No systemd service found at {:?}", service_path);
-  }
+  println!("Linux service uninstallation:");
+  println!();
+  println!("Run:");
+  println!("  systemctl --user stop ward");
+  println!("  systemctl --user disable ward");
+  println!("  rm ~/.config/systemd/user/ward.service");
+  println!("  systemctl --user daemon-reload");
 
   Ok(())
 }
